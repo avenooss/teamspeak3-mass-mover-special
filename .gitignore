@@ -32,6 +32,7 @@ Thumbs.db
 # User backup/import data
 server.json
 servergroups.txt
+!tests/fixtures/servergroups.txt
 
 # Compiled files
 *.dylib

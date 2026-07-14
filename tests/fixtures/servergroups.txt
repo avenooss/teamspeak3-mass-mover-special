@@ -1,0 +1,6 @@
+Example Admin
+1
+sgid=10 permsid=i_group_sort_id permvalue=10 permnegated=0 permskip=0|permsid=i_client_move_power permvalue=50 permnegated=0 permskip=1
+Example Member
+1
+sgid=11 permsid=b_virtualserver_info_view permvalue=1 permnegated=0 permskip=0|permsid=i_client_poke_power permvalue=25 permnegated=0 permskip=0

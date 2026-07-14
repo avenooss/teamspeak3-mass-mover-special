@@ -1,66 +1,45 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# TeamSpeak 3 SDK Setup Script
-# This script downloads and sets up the TeamSpeak 3 Client SDK
+# Download the official TeamSpeak 3 Client Plugin SDK used by this project.
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+set -euo pipefail
 
-echo -e "${YELLOW}TeamSpeak 3 SDK Setup Script${NC}"
-echo "This script will download and set up the TeamSpeak 3 Client SDK"
-echo
-
-# Check if wget is installed
-if ! command -v wget &> /dev/null; then
-    echo -e "${RED}Error: wget is not installed${NC}"
-    echo "Please install wget and try again"
-    exit 1
-fi
-
-# Set SDK version and URLs
-SDK_VERSION=26
-SDK_ARCHIVE="${SDK_VERSION}.tar.gz"
-SDK_URL="https://github.com/teamspeak/ts3client-pluginsdk/archive/refs/tags/${SDK_VERSION}.tar.gz"
+SDK_VERSION="26"
 SDK_DIR="ts3client-pluginsdk-${SDK_VERSION}"
+SDK_URL="https://github.com/teamspeak/ts3client-pluginsdk/archive/refs/tags/${SDK_VERSION}.tar.gz"
+SDK_ARCHIVE="${SDK_DIR}.tar.gz"
 
-# Download the SDK
-if [ -d "$SDK_DIR" ]; then
-    echo -e "${GREEN}SDK directory already exists: $SDK_DIR${NC}"
+if [[ -d "$SDK_DIR/include" ]]; then
+    echo "TeamSpeak Plugin SDK v${SDK_VERSION} is already available in $SDK_DIR."
     exit 0
 fi
 
-echo -e "${YELLOW}Downloading TeamSpeak 3 Client SDK...${NC}"
-wget -O "$SDK_ARCHIVE" "$SDK_URL"
-if [ $? -ne 0 ]; then
-    echo -e "${RED}Error: Failed to download the SDK${NC}"
+command -v tar >/dev/null 2>&1 || {
+    echo "ERROR: tar is required." >&2
     exit 1
-fi
+}
 
-echo -e "${YELLOW}Extracting SDK...${NC}"
-tar -xzf "$SDK_ARCHIVE"
-if [ $? -ne 0 ]; then
-    echo -e "${RED}Error: Failed to extract the SDK${NC}"
+cleanup() {
     rm -f "$SDK_ARCHIVE"
+}
+trap cleanup EXIT
+
+echo "Downloading TeamSpeak Plugin SDK v${SDK_VERSION}..."
+if command -v curl >/dev/null 2>&1; then
+    curl --fail --location --retry 3 --output "$SDK_ARCHIVE" "$SDK_URL"
+elif command -v wget >/dev/null 2>&1; then
+    wget --tries=3 --output-document="$SDK_ARCHIVE" "$SDK_URL"
+else
+    echo "ERROR: curl or wget is required." >&2
     exit 1
 fi
 
-# Rename the extracted folder to match README instructions
-EXTRACTED_DIR="ts3client-pluginsdk-${SDK_VERSION}"
-if [ ! -d "$EXTRACTED_DIR" ]; then
-    # Try to find the extracted directory
-    EXTRACTED_DIR=$(tar -tzf "$SDK_ARCHIVE" | head -1 | cut -f1 -d"/")
+echo "Extracting SDK..."
+tar -xzf "$SDK_ARCHIVE"
+
+if [[ ! -d "$SDK_DIR/include" ]]; then
+    echo "ERROR: The downloaded archive did not contain the expected SDK directory." >&2
+    exit 1
 fi
 
-if [ "$EXTRACTED_DIR" != "$SDK_DIR" ] && [ -d "$EXTRACTED_DIR" ]; then
-    mv "$EXTRACTED_DIR" "$SDK_DIR"
-fi
-
-# Clean up
-rm -f "$SDK_ARCHIVE"
-
-echo -e "${GREEN}SDK setup complete!${NC}"
-echo "SDK directory: $SDK_DIR"
-echo "You can now run ./build.sh to build the plugin" 
+echo "SDK setup complete: $SDK_DIR"

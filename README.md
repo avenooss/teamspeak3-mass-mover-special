@@ -1,127 +1,140 @@
-# TeamSpeak 3 MassMover Plugin
+# TeamSpeak 3 MassMover Special
 
-TS3MassMover is a TeamSpeak 3 client plugin with two independent feature sets:
+[![CI](https://github.com/avenooss/teamspeak3-mass-mover-special/actions/workflows/ci.yml/badge.svg)](https://github.com/avenooss/teamspeak3-mass-mover-special/actions/workflows/ci.yml)
+[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](CHANGELOG.md)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-- Mass-move clients from a channel hierarchy.
-- Export and restore a server's channel structure through the local TeamSpeak client.
+TS3MassMover Special extends the original MassMover client plugin with channel
+backup, restore, cleanup, and server-group migration. It uses TeamSpeak 3 Plugin
+SDK v26 and the permissions of the currently connected client.
 
-It does not connect to ServerQuery and does not require the ServerQuery port to be open. All operations use the TeamSpeak Plugin SDK and the identity and permissions of the currently connected client.
+> **No ServerQuery connection is used.** The ServerQuery port may remain closed.
 
-## Channel backup and restore
+## Features
 
-The global plugin menu contains:
+| Feature | Plugin menu action | Input/output |
+| --- | --- | --- |
+| Move clients recursively | `MassMove here` | Current TeamSpeak connection |
+| Export channel structure | `Export Server Structure` | Writes `Desktop/server.json` |
+| Restore channel structure | `Restore Server Structure` | Reads `Desktop/server.json` |
+| Import server groups | `Import Server Groups` | Reads `Desktop/servergroups.txt` |
+| Remove existing channels | `Delete All Non-Default Channels` | Preserves the default channel |
 
-- `Export Server Structure`
-- `Restore Server Structure`
-- `Import Server Groups`
-- `Delete All Non-Default Channels`
+Channel export includes hierarchy, sibling order, names, topics, descriptions,
+codec settings, client limits, lifecycle flags, password-protection flags,
+delete delay, and icon IDs. Restore creates parents and preceding siblings first
+and maps old IDs to destination IDs through TeamSpeak callbacks.
 
-Export writes a pretty-printed `server.json` file to the current user's Desktop. It includes channel hierarchy, sibling order, names, topics, descriptions, codec settings, client limits, lifecycle flags, password-protected flags, delete delay, and icon IDs.
+## Safety and limitations
 
-Restore reads `Desktop/server.json` and creates channels one at a time. Parent channels and preceding siblings are created before their dependants, and TeamSpeak callbacks are used to map old channel IDs to newly assigned IDs.
+- Channel cleanup is destructive. It requires selecting the menu item twice on
+  the same server within 15 seconds and always preserves the default channel.
+- Restore creates channels; it does not overwrite existing ones. Clean the
+  destination first if you want to avoid duplicates.
+- Stored channel passwords cannot be read by a TeamSpeak client. Export writes
+  `passwordProtected`, but `password` is `null`. Add a known password to the JSON
+  manually before restore if required.
+- Empty temporary channels cannot survive during a client-side restore, so they
+  are restored as semi-permanent and reported at completion.
+- Server groups are imported separately. Existing groups with the same name are
+  skipped and client memberships are not assigned automatically.
+- Channel groups, tokens, bans, virtual-server configuration, files, avatars,
+  and client identities are outside the current backup format.
+- Every operation is limited by the connected identity's TeamSpeak permissions.
 
-## Importing server groups and permissions
+Always keep a verified export and test migration on a non-production server
+before deleting channels.
 
-`Import Server Groups` reads `Desktop/servergroups.txt`. The supported UTF-8 text format contains three lines per group: the group name, numeric group type, and a ServerQuery-style permission line containing `sgid`, `permsid`, `permvalue`, `permnegated`, and `permskip` fields.
-
-The old `sgid` value is used only as source metadata. The plugin creates each group through the local Plugin SDK, discovers its new destination ID, resolves every permission by `permsid`, and applies permissions in asynchronous batches.
-
-For safety:
-
-- Existing destination groups with the same name are skipped and never modified.
-- Empty group names and malformed records are skipped.
-- Permissions unknown to the destination server version are skipped and reported.
-- No clients are automatically assigned to imported groups.
-- The connected identity must have enough group and permission modify power.
-
-### Restore workflow
-
-1. Connect the TeamSpeak client to the source server.
-2. Choose `Plugins > Export Server Structure`.
-3. Copy the generated `server.json` to the Desktop of the machine performing the restore, if necessary.
-4. Connect the same TeamSpeak client to the destination server using an identity with channel-creation permissions.
-5. Choose `Plugins > Restore Server Structure`.
-6. Review the TeamSpeak client log and completion message.
-
-Do not run Export and Restore concurrently.
-
-## Removing the old channel structure
-
-`Delete All Non-Default Channels` removes the destination server's existing channel tree before a Restore. TeamSpeak's default channel is always preserved. Channels are sorted by depth and deleted from deepest child to shallowest parent with forced deletion, so connected clients may be moved by the server.
-
-This operation cannot be undone. As an accidental-click safeguard, the menu item must be selected twice on the same server within 15 seconds. The first click only arms the operation and prints a warning; the second click starts deletion. Groups, permissions, clients, and the default channel are not deleted.
-
-Recommended replacement workflow:
-
-1. Export and retain a verified backup before cleanup.
-2. Connect to the destination using an identity with channel-delete permission.
-3. Select `Delete All Non-Default Channels` twice within 15 seconds.
-4. Wait for `Channel Cleanup Complete`.
-5. Run `Restore Server Structure` once.
-
-Never test cleanup for the first time on a production server.
-
-## Important limitations
-
-- TeamSpeak clients cannot read stored channel passwords. Export records `passwordProtected`, but writes `password: null`. A password may be entered manually into the JSON before Restore; otherwise the restored channel is unprotected.
-- Server groups are not part of `server.json`; they can be imported separately from `servergroups.txt`. Channel groups, client memberships, tokens, bans, virtual-server configuration, files, avatars, and client identities are not transferred.
-- Restore succeeds only where the connected client has sufficient permissions on the destination server.
-- Empty temporary channels would be deleted while a client-side restore is still running. They are therefore restored as semi-permanent channels and reported in the completion message.
-- The destination server's existing channels are not deleted or overwritten. Restore creates additional channels.
-
-## MassMove
-
-Right-click a channel and choose `MassMove here`. The plugin recursively collects clients from the selected channel, its ancestors, and their subchannels, then requests that they be moved to the selected channel. The connected user is handled separately.
-
-## Building
+## Build
 
 Prerequisites:
 
-- TeamSpeak 3 Plugin SDK v26 in `ts3client-pluginsdk-26`
-- GCC/MinGW or Microsoft Visual C++
+- A 64-bit TeamSpeak 3 client compatible with Plugin SDK v26
+- GCC on Linux, MinGW-w64 or Visual Studio on Windows
+- `curl` or `wget`, plus `tar`, to run the SDK setup script
 
-Download the SDK automatically on Linux:
+Linux or a Linux environment with MinGW-w64 installed:
 
 ```bash
-chmod +x setup_sdk.sh
+chmod +x setup_sdk.sh build.sh
 ./setup_sdk.sh
-```
-
-Linux:
-
-```bash
-chmod +x build.sh
 ./build.sh
 ```
 
-Windows:
+The script builds `bin/linux/massmover.so`. If MinGW-w64 is available, it also
+builds `bin/windows/massmover.dll`. It never installs either file automatically.
+
+Windows, after placing the official SDK in `ts3client-pluginsdk-26`:
 
 ```cmd
 build_windows.bat
 ```
 
-cJSON 1.7.19 is vendored in `cjson/` and compiled by both build scripts.
+cJSON 1.7.19 is vendored under `cjson/`; see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-## Installation
+## Install
 
-Linux:
+1. Close TeamSpeak.
+2. Copy only the plugin binary for your operating system:
+   - Windows: `bin\windows\massmover.dll` to `%APPDATA%\TS3Client\plugins\`
+   - Native Linux: `bin/linux/massmover.so` to `~/.ts3client/plugins/`
+   - Flatpak Linux: `bin/linux/massmover.so` to
+     `~/.var/app/com.teamspeak.TeamSpeak3/.ts3client/plugins/`
+3. Start TeamSpeak and enable the plugin in its Addons/Plugins manager.
+
+No SDK files, source files, JSON library files, or build directories need to be
+copied into the TeamSpeak plugin directory.
+
+## Recommended migration workflow
+
+1. Connect to the source server and select `Export Server Structure`.
+2. Keep a safe copy of the generated `Desktop/server.json`.
+3. Put the required `servergroups.txt` on the Desktop if groups will be migrated.
+4. Connect to the destination with an identity that has sufficient permissions.
+5. If appropriate, select `Delete All Non-Default Channels` twice within 15
+   seconds and wait for the completion message.
+6. Select `Restore Server Structure` and wait for completion.
+7. Select `Import Server Groups` and review skipped permissions/groups in the
+   TeamSpeak client log.
+8. Verify channel hierarchy, permissions, and access with a test identity.
+
+Do not start another export, restore, import, or cleanup operation while one is
+still active.
+
+## Tests
+
+The test suite uses mocked TeamSpeak SDK callbacks and never contacts a server:
 
 ```bash
-cp bin/linux/massmover.so ~/.ts3client/plugins/
+mkdir -p build/tests
+gcc -O0 -g -Wall -std=gnu99 -Its3client-pluginsdk-26/include -Icjson \
+  tests/backup_restore_test.c cjson/cJSON.c -o build/tests/backup_restore_test
+gcc -O0 -g -Wall -std=gnu99 -Its3client-pluginsdk-26/include -Icjson \
+  tests/servergroups_file_test.c cjson/cJSON.c -o build/tests/servergroups_file_test
+./build/tests/backup_restore_test
+./build/tests/servergroups_file_test tests/fixtures/servergroups.txt
 ```
 
-Windows:
+GitHub Actions runs the Linux build, Windows cross-build, mock integration test,
+and group parser test for every pull request.
 
-```cmd
-copy bin\windows\massmover.dll %APPDATA%\TS3Client\plugins\
+## Repository layout
+
+```text
+src/                 Plugin implementation and public header
+cjson/               Vendored cJSON source
+tests/               Mock integration tests and fixtures
+.github/workflows/   Continuous integration
+build.sh             Linux and optional Windows cross-build
+build_windows.bat    Native Windows build
+setup_sdk.sh         Official Plugin SDK v26 downloader
 ```
 
-Restart TeamSpeak and enable MassMover under `Tools > Options > Addons` or the plugin manager used by your client version.
-
-## Testing
-
-`tests/backup_restore_test.c` provides a local mock-SDK integration test. It exercises description retrieval, JSON serialization and parsing, parent-ID mapping, and asynchronous channel creation without contacting a TeamSpeak server.
+See [CHANGELOG.md](CHANGELOG.md) for release history and
+[CONTRIBUTING.md](CONTRIBUTING.md) before submitting changes.
 
 ## License
 
-The plugin is licensed under the MIT License. cJSON retains its upstream MIT license notice in its source files.
+This project is distributed under the [MIT License](LICENSE). Vendored cJSON
+retains its upstream MIT notice.

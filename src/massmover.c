@@ -17,8 +17,11 @@
  * License: Free to use and modify
  */
 
-#if defined(WIN32) || defined(__WIN32__) || defined(_WIN32)
+#ifdef _MSC_VER
 #pragma warning(disable : 4100) /* Disable Unreferenced parameter warning */
+#endif
+
+#if defined(WIN32) || defined(__WIN32__) || defined(_WIN32)
 #include <windows.h>
 #endif
 

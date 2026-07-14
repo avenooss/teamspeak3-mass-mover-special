@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Install Windows cross-compiler
+        run: sudo apt-get update && sudo apt-get install --yes mingw-w64
+
+      - name: Download TeamSpeak Plugin SDK
+        run: ./setup_sdk.sh
+
+      - name: Build Linux and Windows plugins
+        run: ./build.sh
+
+      - name: Build tests
+        run: |
+          mkdir -p build/tests
+          gcc -O0 -g -Wall -std=gnu99 -Its3client-pluginsdk-26/include -Icjson tests/backup_restore_test.c cjson/cJSON.c -o build/tests/backup_restore_test
+          gcc -O0 -g -Wall -std=gnu99 -Its3client-pluginsdk-26/include -Icjson tests/servergroups_file_test.c cjson/cJSON.c -o build/tests/servergroups_file_test
+
+      - name: Run mock SDK integration test
+        run: ./build/tests/backup_restore_test
+
+      - name: Run server-group parser test
+        run: test "$(./build/tests/servergroups_file_test tests/fixtures/servergroups.txt)" = "groups=2 permissions=4 invalid=0"
+
+      - name: Verify build outputs
+        run: |
+          test -s bin/linux/massmover.so
+          test -s bin/windows/massmover.dll

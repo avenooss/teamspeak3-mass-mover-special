@@ -1,4 +1,9 @@
+#ifdef _WIN32
 #include <direct.h>
+#else
+#include <sys/stat.h>
+#include <sys/types.h>
+#endif
 
 #include "../src/massmover.c"
 
@@ -222,9 +227,17 @@ int main(void)
     struct TS3Functions functions;
     FILE* groupFile;
 
-    _mkdir("build\\testhome");
-    _mkdir("build\\testhome\\Desktop");
-    _putenv_s("USERPROFILE", "build\\testhome");
+#ifdef _WIN32
+    _mkdir("build");
+    _mkdir("build/testhome");
+    _mkdir("build/testhome/Desktop");
+    _putenv_s("USERPROFILE", "build/testhome");
+#else
+    mkdir("build", 0755);
+    mkdir("build/testhome", 0755);
+    mkdir("build/testhome/Desktop", 0755);
+    setenv("HOME", "build/testhome", 1);
+#endif
 
     memset(&functions, 0, sizeof(functions));
     functions.freeMemory = mockFreeMemory;
@@ -253,7 +266,7 @@ int main(void)
 
     startServerExport(1);
     assert(!exportState.active);
-    jsonData = readJsonFile("build\\testhome\\Desktop\\server.json");
+    jsonData = readJsonFile("build/testhome/Desktop/server.json");
     assert(jsonData != NULL);
     root = cJSON_Parse(jsonData);
     free(jsonData);
@@ -271,7 +284,7 @@ int main(void)
     assert(createdParents[0] == 0);
     assert(createdParents[1] == 100);
 
-    groupFile = fopen("build\\testhome\\Desktop\\servergroups.txt", "wb");
+    groupFile = fopen("build/testhome/Desktop/servergroups.txt", "wb");
     assert(groupFile != NULL);
     fputs("Test Admin\r\n1\r\nsgid=10 permsid=i_group_sort_id permvalue=10 permnegated=0 permskip=0|permsid=i_client_move_power permvalue=50 permnegated=0 permskip=1\r\n", groupFile);
     fputs("Test Member\r\n1\r\nsgid=11 permsid=b_virtualserver_info_view permvalue=1 permnegated=0 permskip=0|permsid=i_client_poke_power permvalue=25 permnegated=0 permskip=0\r\n", groupFile);

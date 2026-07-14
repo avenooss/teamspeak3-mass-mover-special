@@ -25,14 +25,21 @@ pause
 goto :end
 
 :mingw_build
-gcc -c -O2 -Wall -DWIN32 -Its3client-pluginsdk-26/include src/massmover.c -o build/windows/massmover.o
+gcc -c -O2 -Wall -DWIN32 -Its3client-pluginsdk-26/include -Icjson src/massmover.c -o build/windows/massmover.o
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Compilation failed
     pause
     goto :end
 )
 
-gcc -shared -o bin/windows/massmover.dll build/windows/massmover.o
+gcc -c -O2 -Wall -Icjson cjson/cJSON.c -o build/windows/cJSON.o
+if %ERRORLEVEL% neq 0 (
+    echo ERROR: cJSON compilation failed
+    pause
+    goto :end
+)
+
+gcc -shared -o bin/windows/massmover.dll build/windows/massmover.o build/windows/cJSON.o
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Linking failed
     pause
@@ -41,14 +48,21 @@ if %ERRORLEVEL% neq 0 (
 goto :success
 
 :msvc_build
-cl /c /O2 /DWIN32 /I"ts3client-pluginsdk-26/include" src/massmover.c /Fo"build/windows/massmover.obj"
+cl /c /O2 /DWIN32 /I"ts3client-pluginsdk-26/include" /I"cjson" src/massmover.c /Fo"build/windows/massmover.obj"
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Compilation failed
     pause
     goto :end
 )
 
-link /DLL /OUT:"bin/windows/massmover.dll" build/windows/massmover.obj
+cl /c /O2 /I"cjson" cjson/cJSON.c /Fo"build/windows/cJSON.obj"
+if %ERRORLEVEL% neq 0 (
+    echo ERROR: cJSON compilation failed
+    pause
+    goto :end
+)
+
+link /DLL /OUT:"bin/windows/massmover.dll" build/windows/massmover.obj build/windows/cJSON.obj
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Linking failed
     pause
@@ -69,4 +83,4 @@ echo 3. Enable the plugin in Settings ^> Plugins
 echo.
 pause
 
-:end 
+:end

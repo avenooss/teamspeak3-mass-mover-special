@@ -34,6 +34,12 @@ PLUGINS_EXPORTDLL void        ts3plugin_initMenus(struct PluginMenuItem*** menuI
 PLUGINS_EXPORTDLL void        ts3plugin_initHotkeys(struct PluginHotkey*** hotkeys);
 PLUGINS_EXPORTDLL void        ts3plugin_onMenuItemEvent(uint64 serverConnectionHandlerID, enum PluginMenuType type, int menuItemID, uint64 selectedItemID);
 PLUGINS_EXPORTDLL int         ts3plugin_onServerErrorEvent(uint64 serverConnectionHandlerID, const char* errorMessage, unsigned int error, const char* returnCode, const char* extraMessage);
+PLUGINS_EXPORTDLL void        ts3plugin_onUpdateChannelEvent(uint64 serverConnectionHandlerID, uint64 channelID);
+PLUGINS_EXPORTDLL void        ts3plugin_onNewChannelCreatedEvent(uint64 serverConnectionHandlerID, uint64 channelID, uint64 channelParentID, anyID invokerID, const char* invokerName, const char* invokerUniqueIdentifier);
+PLUGINS_EXPORTDLL void        ts3plugin_onDelChannelEvent(uint64 serverConnectionHandlerID, uint64 channelID, anyID invokerID, const char* invokerName, const char* invokerUniqueIdentifier);
+PLUGINS_EXPORTDLL void        ts3plugin_onServerGroupListEvent(uint64 serverConnectionHandlerID, uint64 serverGroupID, const char* name, int type, int iconID, int saveDB);
+PLUGINS_EXPORTDLL void        ts3plugin_onServerGroupListFinishedEvent(uint64 serverConnectionHandlerID);
+PLUGINS_EXPORTDLL int         ts3plugin_onServerPermissionErrorEvent(uint64 serverConnectionHandlerID, const char* errorMessage, unsigned int error, const char* returnCode, unsigned int failedPermissionID);
 
 /* Stub functions */
 PLUGINS_EXPORTDLL void        ts3plugin_currentServerConnectionChanged(uint64 serverConnectionHandlerID);
@@ -46,4 +52,4 @@ PLUGINS_EXPORTDLL int         ts3plugin_requestAutoload();
 }
 #endif
 
-#endif 
+#endif

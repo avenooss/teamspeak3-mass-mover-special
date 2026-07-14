@@ -1,5 +1,6 @@
 # TeamSpeak 3 SDK
 ts3client-pluginsdk-*/
+*.tar.gz
 
 # Build directories
 build/
@@ -28,6 +29,10 @@ Thumbs.db
 *.tmp
 *.bak
 
+# User backup/import data
+server.json
+servergroups.txt
+
 # Compiled files
 *.dylib
 
@@ -35,4 +40,4 @@ Thumbs.db
 *.dSYM/
 *.su
 *.idb
-*.pdb 
+*.pdb
